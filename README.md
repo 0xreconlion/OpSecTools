@@ -8,5 +8,8 @@ Open Source Tools - take em, break em, make em better with bubble gum
 # ADDED TOS user agrees to all aforementioned terms: if used in saleable product code MUST provide proper attributions to [0xReconLion] these works and derivitives may fall under GPL3.0 licensure if party is found to attempt sale of public source code without attribution. damages may be sought, at behest of creator. 
 
 
-#we
-#me
+we
+
+me
+
+anon

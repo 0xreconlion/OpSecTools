@@ -1,19 +1,30 @@
 # OpSecTools
-Open Source Tools - take em, break em, make em better with bubble gum
 
+Open-source security and operations tools from 0xReconLion.
 
-# These tools should be used properly, made secure over time, and allow anyone the ability to grow their skill sets. i encourage the use of these in production & saleable products with no licensure or fees beyond attribution to the creator of revision in use. 
+These tools are built to be studied, improved, and used responsibly. Keep the
+work secure over time, document changes clearly, and do not ship code you have
+not reviewed.
 
+## Tools
 
-# ADDED TOS user agrees to all aforementioned terms: if used in saleable product code MUST provide proper attributions to [0xReconLion] these works and derivitives may fall under GPL3.0 licensure if party is found to attempt sale of public source code without attribution. damages may be sought, at behest of creator. 
+| Tool | Status | Description |
+| --- | --- | --- |
+| `tools/pi-telemetry` | Initial package | Lightweight Raspberry Pi telemetry dashboard package. |
 
+## License
 
+Unless a tool directory states otherwise, this repository is released under the
+MIT License. See [LICENSE](LICENSE).
 
-anon
+The MIT License allows use, copying, modification, distribution, sublicensing,
+and sale, provided the copyright and license notices are included in copies or
+substantial portions of the software.
 
-we
+Attribution is appreciated. The license notice is required.
 
-me
+## Responsible Use
 
-i
-
+Use these tools only on systems you own or are authorized to inspect. Security
+and operations software can expose sensitive system details; review defaults
+before running anything on a shared network or production host.

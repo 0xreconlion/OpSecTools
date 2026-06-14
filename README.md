@@ -33,4 +33,4 @@ and operations software can expose sensitive system details; review defaults
 before running anything on a shared network or production host.
 
 
-*anon we me i
+anon -> we -> me -> i

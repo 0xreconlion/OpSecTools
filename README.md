@@ -6,6 +6,8 @@ These tools are built to be studied, improved, and used responsibly. Keep the
 work secure over time, document changes clearly, and do not ship code you have
 not reviewed.
 
+*T00LS HAVE BEEN WRITTEN/ADAPTED/EDITED/AUDITED/PUSHED with the assistance of AI. I am not a developer or traditional software engineer. These tools are used at your own risk with encouragement to enhance, be cool.
+
 ## Tools
 
 | Tool | Status | Description |

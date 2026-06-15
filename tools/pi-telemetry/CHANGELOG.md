@@ -53,6 +53,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Host/LLM dashboard view selector.
+- Metadata-only Codex CLI telemetry for local LLM monitoring.
+- LLM metrics for token totals, token delta/rate, model mix, recent thread metadata, process pressure, and host pressure.
+- Runtime controls for disabling LLM telemetry and overriding Codex state/process matching.
+- Manual acceptance testing checklist for Host/LLM dashboard verification.
+
+### Changed
+
+- Dashboard polling now pauses during browser resize and resumes after layout settles.
+- HTML responses use nonce-based CSP for embedded style/script blocks.
+
+### Security
+
+- LLM telemetry intentionally excludes prompt text, session JSONL contents, thread titles/previews, full workspace paths, and secrets.
+- Aborted browser fetches no longer print broken-pipe tracebacks from the local HTTP server.
+
 ### Planned for future releases
 
 - XDG config file support (`~/.config/pi-telemetry/config.toml`)

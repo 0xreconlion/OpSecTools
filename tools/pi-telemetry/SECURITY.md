@@ -15,6 +15,7 @@ Pi Telemetry is designed for **local-only, trusted environments**. The default c
 - **Default isolation** – Binds to localhost only; no remote exposure by default.
 - **Information disclosure** – Uses proper HTML escaping to prevent XSS when displaying system information.
 - **Request security** – Sends cache-control headers and enforces secure response headers (X-Frame-Options, X-Content-Type-Options).
+- **LLM privacy boundary** – The LLM view is metadata-only and does not read prompt/session transcript files.
 
 ## Reporting a vulnerability
 
@@ -41,8 +42,23 @@ The `/api/telemetry` endpoint returns system information including:
 - Network interface names and traffic rates
 - Top process names and resource usage
 - Thermal throttle status
+- Optional metadata-only local LLM telemetry if enabled
 
 **This is by design for a local monitoring dashboard**, but users should be aware that anyone with access to the endpoint can observe this information.
+
+### Local LLM telemetry
+
+When enabled, the LLM view reads Codex CLI metadata from `~/.codex/state_5.sqlite` by default. The collector is intentionally limited to safe operational fields such as model/provider, token totals, shortened thread IDs, timestamps, CLI version, and workspace basename.
+
+The collector must not read or expose:
+
+- Prompt text
+- Session JSONL transcript contents
+- Thread titles, previews, or first-user-message fields
+- Full workspace paths
+- API keys, tokens, or environment variables
+
+Users can disable this collector with `PI_TELEMETRY_LLM=off` or `--no-llm-telemetry`.
 
 ### Subprocess calls
 

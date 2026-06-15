@@ -8,6 +8,7 @@ A lightweight, self-contained browser dashboard for real-time Raspberry Pi hardw
 - **Local-first** – Binds to `127.0.0.1` by default; no remote access without explicit opt-in
 - **No frameworks** – Pure HTML5 + vanilla JavaScript, no Electron, no build step
 - **Real-time metrics** – CPU, temperature, memory, disk, load average, network, and top processes
+- **Local LLM view** – Optional metadata-only Codex CLI telemetry for token totals, model mix, and local process pressure
 - **Dark mode dashboard** – Responsive design with live charts
 - **Desktop app** – Launchable from app menu or desktop shortcut on XFCE, GNOME, KDE
 
@@ -55,6 +56,15 @@ pi-telemetry
 
 This starts the Python server on `127.0.0.1:8788` and opens it in Chromium (or your default browser).
 
+### Dashboard views
+
+The dashboard has two live views:
+
+- **Host** – CPU, temperature, memory, disk, load average, network, Pi health, and top process pressure.
+- **LLM** – Metadata-only local LLM telemetry focused on Codex CLI usage, token totals, token delta/rate, model mix, recent thread metadata, Codex process pressure, and host pressure while LLM work is active.
+
+The browser UI adapts to full-screen, snapped, and narrow windows. During manual resize or screen snapping, polling pauses briefly and resumes after the layout settles so the live feed does not fight the browser while frames are being adjusted.
+
 ### Custom port
 
 ```bash
@@ -81,6 +91,16 @@ curl http://127.0.0.1:8788/api/telemetry | jq .
 
 Response includes: CPU, memory, disk, temperature, network stats, process list, and throttle status.
 
+When enabled, the response also includes `llm` metadata from local Codex CLI state:
+
+- Thread count, token totals, and token delta/rate
+- Model/provider aggregate counts
+- Recent thread IDs shortened for display
+- Workspace basename only, not the full path
+- Matching local process CPU/RSS pressure
+
+Prompt text, session JSONL content, thread titles, previews, and full project paths are not read or exposed.
+
 ### Health check
 
 ```bash
@@ -103,6 +123,18 @@ Or close the Chromium window.
 | `PI_TELEMETRY_PORT` | `8788` | HTTP server port |
 | `PI_TELEMETRY_BIND` | `127.0.0.1` | HTTP server bind address (localhost only by default) |
 | `PI_TELEMETRY_URL` | `http://127.0.0.1:${PORT}` | Override the URL opened in the browser |
+| `PI_TELEMETRY_LLM` | `true` | Enable metadata-only local LLM telemetry (`0`, `false`, `no`, `off`, or `disabled` turn it off) |
+| `PI_TELEMETRY_CODEX_STATE` | `~/.codex/state_5.sqlite` | Override the Codex CLI state database path |
+| `PI_TELEMETRY_CODEX_PROCESS` | `codex` | Process name/cmdline marker used for local LLM process pressure |
+
+The Python entrypoint also accepts matching command-line flags:
+
+```bash
+python -m pi_telemetry.dashboard \
+  --no-llm-telemetry \
+  --codex-state-path ~/.codex/state_5.sqlite \
+  --codex-process-marker codex
+```
 
 ## Security
 
@@ -122,8 +154,19 @@ The `/api/telemetry` endpoint returns:
 - Network interface names and traffic rates
 - Top 8 processes by CPU usage (name, PID, and usage percent)
 - Throttle status (if `vcgencmd` is available)
+- Metadata-only local LLM telemetry when enabled
 
 **This information is only accessible from `localhost` by default.** If you enable LAN access with `PI_TELEMETRY_BIND=0.0.0.0`, anyone on your network can see this telemetry.
+
+### LLM telemetry privacy
+
+The LLM view reads Codex CLI metadata from `~/.codex/state_5.sqlite` by default. It does not read Codex session JSONL files and does not query prompt text, thread titles, previews, or full workspace paths. The dashboard displays only aggregate metadata and workspace basenames.
+
+Disable LLM telemetry completely with:
+
+```bash
+PI_TELEMETRY_LLM=off pi-telemetry
+```
 
 ### No authentication
 
@@ -164,6 +207,21 @@ The Python server may have crashed. Check the logs:
 
 ```bash
 tail /tmp/pi-telemetry-launch.log
+```
+
+### LLM view shows unavailable
+
+The Codex CLI state database may not exist, may be in a different location, or LLM telemetry may be disabled. Check:
+
+```bash
+ls ~/.codex/state_5.sqlite
+PI_TELEMETRY_CODEX_STATE=/path/to/state_5.sqlite pi-telemetry
+```
+
+For non-Codex local hosts, set a different process marker:
+
+```bash
+PI_TELEMETRY_CODEX_PROCESS=ollama pi-telemetry
 ```
 
 ### Chromium not found
@@ -241,6 +299,7 @@ Pi Telemetry is intentionally single-file and zero-framework:
 
 - **`src/pi_telemetry/dashboard.py`** – Single Python module with embedded HTML/CSS/JS
   - `TelemetryState` – Collects system metrics (thread-safe, single instance)
+  - `CodexTelemetryState` – Reads metadata-only Codex CLI state for the LLM view
   - `DashboardHandler` – Serves HTML dashboard and JSON API
   - `ThrottleCache` – Caches `vcgencmd` calls to avoid subprocess spam
   - Embedded HTML – Self-contained UI with no external dependencies

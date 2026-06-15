@@ -21,6 +21,13 @@
 - [ ] Verify `pi-telemetry` command starts and exits cleanly.
 - [ ] Verify Chromium kiosk/profile behavior on a Pi.
 - [ ] Verify LAN binding is documented and opt-in.
+- [ ] Verify Host view updates at desktop, snapped, and narrow/mobile widths.
+- [ ] Verify resize pauses the feed briefly and returns to `live`.
+- [ ] Verify LLM view with Codex active, Codex idle, and `PI_TELEMETRY_LLM=off`.
+- [ ] Confirm LLM API output contains no prompt text, thread titles, session JSONL
+      content, API keys, full home paths, or credentials.
+- [ ] Verify `PI_TELEMETRY_CODEX_STATE` and `PI_TELEMETRY_CODEX_PROCESS`
+      overrides work as documented.
 
 ## GitHub Setup
 

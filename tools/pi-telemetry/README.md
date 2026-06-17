@@ -83,6 +83,10 @@ Supported update paths:
 The updater is source-driven: new update channels are added by registering another source, not by rewriting the launcher flow.
 Feed notices stay prompt-only unless the feed includes an explicit install command. That keeps staged releases safe while still allowing auto-update mode for trusted feeds.
 
+Example feed payload:
+
+- [docs/release-feed.example.json](docs/release-feed.example.json)
+
 Automatic update before launch is opt-in:
 
 ```bash

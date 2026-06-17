@@ -74,6 +74,8 @@ Build a Raspberry Pi / Linux telemetry tool that:
 - `README.md`
 - `CHANGELOG.md`
 - `docs/RELEASE_CHECKLIST.md`
+- `docs/release-feed.example.json`
+- `docs/RELEASE_NOTES_v1.1.1.md`
 
 ## AAR
 
@@ -114,6 +116,11 @@ Build a Raspberry Pi / Linux telemetry tool that:
 - Keep release-feed notices prompt-first by default.
 - Keep version bumps and release notes synchronized in one pass.
 - Use a dedicated release note doc for each tagged cut so the history stays searchable.
+
+### Release Notes Draft
+
+- `v1.1.1` release notes should emphasize source-driven update hardening, explicit feed install commands, version-history cleanup, and the new example release-feed payload.
+- Keep the GitHub draft release notes synchronized with `docs/RELEASE_NOTES_v1.1.1.md`.
 
 ## Token Cost Analysis
 
@@ -178,3 +185,4 @@ No exact provider billing meter was available in this workspace, so this is an e
 | Date | Version | Change | Reason | Scope |
 |---|---|---|---|---|
 | 2026-06-16 | 2026-06-16.1 | Added combined OBS, AAR, and token cost analysis note | Keep the release story in one source document | `tools/pi-telemetry/docs/OBS_AAR_TOKEN_COST_ANALYSIS.md` |
+| 2026-06-16 | 2026-06-16.2 | Added release-feed example and release-notes draft note | Close the release loop with an executable feed payload | `tools/pi-telemetry/docs/release-feed.example.json`, `tools/pi-telemetry/README.md` |

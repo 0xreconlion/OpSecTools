@@ -602,6 +602,7 @@ Example post:
 ### 7.1 Version management
 
 - **v1.0.x** – Bug fixes and security patches only
+- **v1.1.1** – Patch release for update-path hardening and doc cleanup
 - **v1.1.0** – New features (opt-in config file, systemd service, etc.)
 - **v2.0.0** – Breaking changes (Python version bump, module reorganization, etc.)
 

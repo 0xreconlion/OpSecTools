@@ -12,7 +12,7 @@ Environment variables:
     PI_TELEMETRY_URL – URL opened in browser (default: http://127.0.0.1:{PORT})
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.1"
 __author__ = "ReconLion"
 __license__ = "MIT"
 

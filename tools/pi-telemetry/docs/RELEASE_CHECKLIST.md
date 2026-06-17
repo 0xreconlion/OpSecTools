@@ -9,7 +9,7 @@
       assumptions are present.
 - [ ] Run formatting and tests locally.
 
-## Before v1.0.0 Tag
+## Before v1.1.1 Tag
 
 - [ ] `cd tools/pi-telemetry`
 - [ ] `python -m pip install -e ".[dev]"`
@@ -28,6 +28,12 @@
       content, API keys, full home paths, or credentials.
 - [ ] Verify `PI_TELEMETRY_CODEX_STATE` and `PI_TELEMETRY_CODEX_PROCESS`
       overrides work as documented.
+- [ ] Verify the startup update banner appears when a newer release is detected.
+- [ ] Verify `PI_TELEMETRY_UPDATE_MODE=auto` performs a best-effort update before launch.
+- [ ] Verify the shown update command matches the install mode (`pip` or git-backed source checkout).
+- [ ] Verify an unreleased git checkout shows a working-tree prompt.
+- [ ] Verify `PI_TELEMETRY_RELEASE_FEED_URL` can display beta/stable feed notices.
+- [ ] Confirm the combined OBS/AAR/token-cost note is current and linked from the release docs.
 
 ## GitHub Setup
 

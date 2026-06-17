@@ -20,6 +20,8 @@ Release note, AAR, and token-cost analysis source:
 
 ### From source
 
+Requires Python 3.10+.
+
 ```bash
 git clone https://github.com/0xreconlion/OpSecTools.git
 cd OpSecTools/tools/pi-telemetry
@@ -75,23 +77,8 @@ When a newer release is available, the launcher checks for it at startup and the
 
 Supported update paths:
 
-- `pip` installs: `python -m pip install --upgrade pi-telemetry`
-- source checkouts with a recorded repo root: `git pull --ff-only` followed by reinstall from that checkout
-- optional release feeds for beta/stable channels via JSON
-- working-tree prompts when the app is running from an unreleased git checkout
-
-The updater is source-driven: new update channels are added by registering another source, not by rewriting the launcher flow.
-Feed notices stay prompt-only unless the feed includes an explicit install command. That keeps staged releases safe while still allowing auto-update mode for trusted feeds.
-
-Example feed payload:
-
-- [docs/release-feed.example.json](docs/release-feed.example.json)
-
-Automatic update before launch is opt-in:
-
-```bash
-PI_TELEMETRY_UPDATE_MODE=auto pi-telemetry
-```
+- `pip` installs from PyPI: `python -m pip install --upgrade pi-telemetry`
+- source checkouts from a git clone: `git pull --ff-only` followed by reinstall from that checkout
 
 ### Custom port
 
@@ -154,9 +141,7 @@ Or close the Chromium window.
 | `PI_TELEMETRY_LLM` | `true` | Enable metadata-only local LLM telemetry (`0`, `false`, `no`, `off`, or `disabled` turn it off) |
 | `PI_TELEMETRY_CODEX_STATE` | `~/.codex/state_5.sqlite` | Override the Codex CLI state database path |
 | `PI_TELEMETRY_CODEX_PROCESS` | `codex` | Process name/cmdline marker used for local LLM process pressure |
-| `PI_TELEMETRY_UPDATE_MODE` | `prompt` | Update behavior at startup (`prompt`, `auto`, or `off`) |
-| `PI_TELEMETRY_INSTALL_ROOT` | unset | Source checkout root used for git-backed updates when available |
-| `PI_TELEMETRY_RELEASE_FEED_URL` | unset | Optional JSON feed for beta/stable release notices |
+| `PI_TELEMETRY_INSTALL_ROOT` | unset | Source checkout root used for git-backed update commands when available |
 
 The Python entrypoint also accepts matching command-line flags:
 
@@ -210,7 +195,7 @@ The launcher opens the dashboard in a dedicated Chromium profile (`/tmp/pi-telem
 ## Requirements
 
 - **Raspberry Pi** 3A+, 3B+, 4, or 5 (or any Linux machine with psutil)
-- **Python 3.9+**
+- **Python 3.10+**
 - **psutil 5.9+** (installed automatically)
 - **Chromium, Firefox, or default browser** (for the UI; the dashboard works in any browser)
 

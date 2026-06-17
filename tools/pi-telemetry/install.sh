@@ -39,11 +39,28 @@ echo -e "${YELLOW}Installing pi-telemetry...${NC}"
 # Create directories
 mkdir -p "$BIN_DIR" "$DESKTOP_DIR" "$ICON_DIR" "$APP_DIR"
 
-# Get the real path to the Python executable
-PYTHON_BIN="$(which python3 || which python)" || {
-    echo -e "${RED}✗ Error: Python 3 not found${NC}"
-    exit 1
+python_version_ok() {
+    local candidate="$1"
+    "$candidate" - <<'PY' >/dev/null 2>&1
+import sys
+sys.exit(0 if sys.version_info >= (3, 10) else 1)
+PY
 }
+
+# Prefer Python 3.10+ so the install environment matches package metadata.
+PYTHON_BIN=""
+for candidate in python3.10 python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1 && python_version_ok "$(command -v "$candidate")"; then
+        PYTHON_BIN="$(command -v "$candidate")"
+        break
+    fi
+done
+
+if [[ -z "$PYTHON_BIN" ]]; then
+    echo -e "${RED}✗ Error: Python 3.10+ not found${NC}"
+    echo "  Install Python 3.10 or newer and rerun this script."
+    exit 1
+fi
 
 echo "  Using Python: $PYTHON_BIN"
 

@@ -27,7 +27,7 @@ tags:
 # Pi Telemetry OBS + AAR + Token Cost Analysis
 
 > [!summary] Signal Brief
-> `pi-telemetry` was hardened into a standalone local telemetry tool with source-driven updates, startup prompts, explicit update mechanisms, and a safer release-feed path. This note captures the operational brief, the after-action review, and the estimated token cost in one source document.
+> `pi-telemetry` was hardened into a standalone local telemetry tool with startup prompts and a simple update path for local installs. This note captures the operational brief, the after-action review, and the estimated token cost in one source document.
 
 ## OBS
 
@@ -52,17 +52,15 @@ Build a Raspberry Pi / Linux telemetry tool that:
 ### Operational Constraints
 
 - Keep the tool local-first and non-wrapper in posture.
-- Preserve a safe default that does not auto-update unless the update source is explicit and trusted.
+- Preserve a safe default that does not update automatically.
 - Keep LLM telemetry metadata-only.
 - Make future update channels easy to add without rewriting launcher flow.
 
 ### Observations
 
 - The launcher now owns startup update checks and passes the notice to the dashboard.
-- The updater is source-driven instead of hardcoded around one package path.
-- Git-backed installs, PyPI installs, and release-feed notices are all modeled separately.
-- Working-tree checkouts are surfaced as prompts, not auto-update targets.
-- Release-feed notices can now stay prompt-only unless they supply a concrete install command.
+- The updater now keeps only the PyPI and git checkout cases.
+- Git-backed installs and PyPI installs each have a clear command path.
 - The dashboard banner makes the update path visible immediately on open.
 
 ### Evidence Trail
@@ -74,7 +72,6 @@ Build a Raspberry Pi / Linux telemetry tool that:
 - `README.md`
 - `CHANGELOG.md`
 - `docs/RELEASE_CHECKLIST.md`
-- `docs/release-feed.example.json`
 - `docs/RELEASE_NOTES_v1.1.1.md`
 
 ## AAR
@@ -88,38 +85,36 @@ Build a Raspberry Pi / Linux telemetry tool that:
 
 ### What Worked
 
-- The source-driven update pipeline made the refactor clean.
+- The simplified update path made the refactor easier to reason about.
 - The dashboard banner already had the right hook points for startup notices.
-- The test suite covered the main update modes well enough to catch the feed-behavior change.
+- The test suite covered the update command cases well enough to catch regressions.
 - Keeping the tool local-first simplified the security boundary.
 
 ### What Got Weird
 
-- A release-feed notice can look like an auto-updatable release even when the feed does not supply an install command.
 - Version references were split across package metadata, changelog, checklist, roadmap, and tests.
 - The startup prompt is only meaningful when the current install is behind a discoverable source; if the installed version matches the source, no prompt appears.
 
 ### What Broke
 
 - No code breakage was left in the final state after verification.
-- Before the refactor, feed notices were too optimistic about auto-update readiness.
+- Before the refactor, update behavior had too many modes for the actual needs of the app.
 
 ### What This Taught Me
 
-- Update sources need to be declarative, not implied.
-- Auto-update must be opt-in by mechanism, not just by user intent.
+- Update behavior should stay explicit and easy to explain.
+- Avoid adding maintenance modes that do not earn their complexity.
 - Release docs and version history need the same level of rigor as code.
 
 ### What Changes Next Time
 
-- Add more update mechanisms only when each one has a clearly defined install command or handler.
-- Keep release-feed notices prompt-first by default.
+- Keep the update flow simple and explicit.
 - Keep version bumps and release notes synchronized in one pass.
 - Use a dedicated release note doc for each tagged cut so the history stays searchable.
 
 ### Release Notes Draft
 
-- `v1.1.1` release notes should emphasize source-driven update hardening, explicit feed install commands, version-history cleanup, and the new example release-feed payload.
+- `v1.1.1` release notes should emphasize the simpler update flow and version-history cleanup.
 - Keep the GitHub draft release notes synchronized with `docs/RELEASE_NOTES_v1.1.1.md`.
 
 ## Token Cost Analysis
@@ -139,7 +134,7 @@ No exact provider billing meter was available in this workspace, so this is an e
 | Workstream | Estimated Input Tokens | Estimated Output Tokens | Notes |
 |---|---:|---:|---|
 | Source discovery and repo review | 6,000-10,000 | 300-600 | Large markdown and code reads dominated this slice. |
-| Updater architecture and code changes | 4,000-7,000 | 700-1,500 | The strategy cleanup and feed-safety change were the main cost. |
+| Updater architecture and code changes | 4,000-7,000 | 700-1,500 | The strategy cleanup was the main cost. |
 | Documentation and release-history cleanup | 3,000-5,000 | 700-1,200 | README, changelog, checklist, roadmap, and new note. |
 | Test review and assertions | 2,000-4,000 | 300-800 | Mostly focused on update modes and version coverage. |
 | Final synthesis and verification | 1,000-2,000 | 200-500 | Cross-checking the release story and doc alignment. |
@@ -176,7 +171,7 @@ No exact provider billing meter was available in this workspace, so this is an e
 
 | Check | Date | Status | Findings |
 |---|---|---|---|
-| Update architecture review | 2026-06-16 | complete | Source-driven pipeline now supports safer feed notices. |
+| Update architecture review | 2026-06-16 | complete | The updater now stays focused on PyPI installs and git checkouts. |
 | Version/revision cleanup | 2026-06-16 | complete | Package metadata and docs now point at 1.1.1. |
 | Single-source report creation | 2026-06-16 | complete | OBS, AAR, and token analysis are in one note. |
 
@@ -185,4 +180,5 @@ No exact provider billing meter was available in this workspace, so this is an e
 | Date | Version | Change | Reason | Scope |
 |---|---|---|---|---|
 | 2026-06-16 | 2026-06-16.1 | Added combined OBS, AAR, and token cost analysis note | Keep the release story in one source document | `tools/pi-telemetry/docs/OBS_AAR_TOKEN_COST_ANALYSIS.md` |
-| 2026-06-16 | 2026-06-16.2 | Added release-feed example and release-notes draft note | Close the release loop with an executable feed payload | `tools/pi-telemetry/docs/release-feed.example.json`, `tools/pi-telemetry/README.md` |
+| 2026-06-16 | 2026-06-16.2 | Added release-notes draft note | Close the release loop with release documentation | `tools/pi-telemetry/README.md` |
+| 2026-06-16 | 2026-06-16.3 | Published the v1.1.1 GitHub release | Close the loop from implementation to public release | GitHub release `v1.1.1` |

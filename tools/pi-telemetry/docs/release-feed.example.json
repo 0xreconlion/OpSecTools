@@ -1,7 +1,0 @@
-{
-  "version": "1.1.1",
-  "channel": "stable",
-  "release_url": "https://github.com/0xreconlion/OpSecTools/releases/tag/v1.1.1",
-  "summary": "Pi Telemetry v1.1.1 is available. This release hardens source-driven updates, adds explicit feed install-command support, and includes release documentation cleanup.",
-  "install_command": "\"/usr/bin/python3\" -m pip install --upgrade pi-telemetry==1.1.1"
-}

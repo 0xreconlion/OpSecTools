@@ -25,17 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Working-tree update prompt for unreleased git checkouts.
-- Optional JSON release-feed support for beta or staged releases.
-- Source-driven update pipeline to make new package channels easy to add.
-- Release-feed notices can carry an explicit install command for auto-update mode.
+- Startup update banner for PyPI installs and git checkouts.
+- Source checkout update command for local git clones.
 - Single-source OBS/AAR/token-cost analysis document for release notes and review.
 
 ### Changed
 
-- Update banner now distinguishes stable, git, feed, and working-tree update sources.
-- Feed notices are prompt-only unless an explicit install command is supplied.
-- Release-note links now use a generic label for non-PyPI feed channels.
+- Update banner now distinguishes PyPI installs from git checkouts.
+- Update flow no longer exposes feed or auto-update plumbing.
 
 ### Fixed
 
@@ -97,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 
-- Python 3.9+ with no heavy frameworks
+- Python 3.10+ with no heavy frameworks
 - Minimal dependencies (psutil only)
 - ThreadingHTTPServer for concurrent requests
 - Smart temperature reading fallback chain

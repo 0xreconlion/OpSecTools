@@ -220,7 +220,7 @@ flake8 src --max-line-length=100
 
 ## Code style
 
-- Python 3.9+ syntax
+- Python 3.10+ syntax
 - Type hints where practical
 - Docstrings for public functions
 - Black formatting (100-char line length)
@@ -314,7 +314,7 @@ What should happen instead?
 
 - Raspberry Pi model: (Pi 4B, Pi 5, etc.)
 - OS: (Raspberry Pi OS Bookworm, Debian 12, etc.)
-- Python version: (3.9, 3.10, 3.11, 3.12)
+- Python version: (3.10, 3.11, 3.12)
 - Browser: (Chromium, Firefox, etc.)
 
 ## Error logs
@@ -382,7 +382,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4

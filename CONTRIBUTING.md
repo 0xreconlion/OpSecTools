@@ -7,7 +7,7 @@ portable, and safe to run on Linux systems.
 
 ```bash
 cd tools/pi-telemetry
-python3 -m venv .venv
+python3.10 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e ".[dev]"

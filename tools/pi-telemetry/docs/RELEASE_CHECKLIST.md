@@ -29,10 +29,7 @@
 - [ ] Verify `PI_TELEMETRY_CODEX_STATE` and `PI_TELEMETRY_CODEX_PROCESS`
       overrides work as documented.
 - [ ] Verify the startup update banner appears when a newer release is detected.
-- [ ] Verify `PI_TELEMETRY_UPDATE_MODE=auto` performs a best-effort update before launch.
 - [ ] Verify the shown update command matches the install mode (`pip` or git-backed source checkout).
-- [ ] Verify an unreleased git checkout shows a working-tree prompt.
-- [ ] Verify `PI_TELEMETRY_RELEASE_FEED_URL` can display beta/stable feed notices.
 - [ ] Confirm the combined OBS/AAR/token-cost note is current and linked from the release docs.
 
 ## GitHub Setup

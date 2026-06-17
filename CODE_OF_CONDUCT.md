@@ -22,4 +22,7 @@ This project expects direct, respectful, technical collaboration.
 Maintainers may edit, hide, close, or lock issues and pull requests that violate
 these expectations. Serious or repeated violations may result in a ban from the
 project spaces.
+*Dont assume you can get away with weaponizing opensource systems, we only ask attribution & assistance in enhancement.*
 
+
+anon -> we -> me -> i

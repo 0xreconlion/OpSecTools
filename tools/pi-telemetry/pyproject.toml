@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pi-telemetry"
-version = "1.0.0"
+version = "1.1.1"
 description = "Lightweight Raspberry Pi hardware telemetry dashboard"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -46,7 +46,7 @@ Repository = "https://github.com/0xreconlion/OpSecTools"
 Issues = "https://github.com/0xreconlion/OpSecTools/issues"
 
 [project.scripts]
-pi-telemetry = "pi_telemetry.dashboard:main"
+pi-telemetry = "pi_telemetry.launcher:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

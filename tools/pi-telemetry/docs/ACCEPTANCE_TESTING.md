@@ -26,6 +26,15 @@ Open `http://127.0.0.1:8788/`.
 - [ ] With `PI_TELEMETRY_LLM=off`, the LLM view reports unavailable/disabled.
 - [ ] With `PI_TELEMETRY_CODEX_PROCESS=ollama`, process matching follows that marker.
 
+## Updates
+
+- [ ] When a newer release exists, the dashboard shows an update banner at startup.
+- [ ] The banner exposes a copyable command and a release-notes link.
+- [ ] `PI_TELEMETRY_UPDATE_MODE=auto` completes a best-effort update before the dashboard starts.
+- [ ] `PI_TELEMETRY_UPDATE_MODE=off` suppresses startup update checks.
+- [ ] An unreleased git checkout still shows a working-tree prompt on open.
+- [ ] `PI_TELEMETRY_RELEASE_FEED_URL` can surface beta/stable notices from a JSON feed.
+
 ## Privacy
 
 Check the API payload:

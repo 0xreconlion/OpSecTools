@@ -72,13 +72,15 @@ cat > "$LAUNCHER" << 'EOF'
 set -euo pipefail
 
 PYTHON_BIN="__PYTHON_BIN__"
+INSTALL_ROOT="__INSTALL_ROOT__"
 
 PORT="${PI_TELEMETRY_PORT:-8788}"
 URL="${PI_TELEMETRY_URL:-http://127.0.0.1:${PORT}}"
 
 # Run the Python dashboard
 python_runner() {
-    "$PYTHON_BIN" -m pi_telemetry.dashboard --host "${PI_TELEMETRY_BIND:-127.0.0.1}" --port "$PORT"
+    PI_TELEMETRY_INSTALL_ROOT="$INSTALL_ROOT" \
+    "$PYTHON_BIN" -m pi_telemetry.launcher --host "${PI_TELEMETRY_BIND:-127.0.0.1}" --port "$PORT"
 }
 
 # Start dashboard in background
@@ -124,6 +126,7 @@ EOF
 
 # Insert the virtualenv Python path into the launcher.
 sed -i "s|__PYTHON_BIN__|$VENV_PYTHON|g" "$LAUNCHER"
+sed -i "s|__INSTALL_ROOT__|$SCRIPT_DIR|g" "$LAUNCHER"
 chmod +x "$LAUNCHER"
 
 # Create .desktop file

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 from pi_telemetry import __author__, __license__, __version__
 from pi_telemetry import dashboard
+from pi_telemetry import updater
 
 
 class RecordingHandler(dashboard.DashboardHandler):
@@ -121,7 +122,7 @@ def make_codex_state(path) -> None:  # type: ignore[no-untyped-def]
 
 
 def test_package_metadata() -> None:
-    assert __version__ == "1.0.0"
+    assert __version__ == "1.1.1"
     assert __author__ == "ReconLion"
     assert __license__ == "MIT"
 
@@ -198,6 +199,18 @@ def test_parse_args_cli_overrides_environment(monkeypatch, tmp_path) -> None:
     assert args.llm_telemetry is True
     assert args.codex_state_path == str(codex_state)
     assert args.codex_process_marker == "codex"
+
+
+def test_load_update_notice_from_environment(monkeypatch) -> None:
+    monkeypatch.setenv(
+        updater.UPDATE_NOTICE_ENV,
+        json.dumps({"available": True, "latest_version": "1.1.0"}),
+    )
+
+    notice = dashboard.load_update_notice()
+
+    assert notice["available"] is True
+    assert notice["latest_version"] == "1.1.0"
 
 
 def test_throttle_cache_reuses_recent_result(monkeypatch) -> None:
@@ -382,6 +395,8 @@ def test_embedded_client_uses_resize_safe_polling() -> None:
     assert 'id="llm-view"' in dashboard.HTML
     assert "function renderLlm" in dashboard.HTML
     assert "activeView" in dashboard.HTML
+    assert "update-banner" in dashboard.HTML
+    assert "Copy command" in dashboard.HTML
 
 
 def test_embedded_client_avoids_inline_style_attributes() -> None:
@@ -409,3 +424,179 @@ def test_head_unknown_endpoint_has_not_found_without_body() -> None:
     assert handler.status == 404
     assert handler.headers["Content-Type"] == "text/plain; charset=utf-8"
     assert handler.wfile.getvalue() == b""
+
+
+def test_version_comparison_prefers_newer_release() -> None:
+    assert updater.is_newer_version("1.2.0", "1.1.9")
+    assert not updater.is_newer_version("1.0.0", "1.0.0")
+
+
+def test_build_update_notice_prefers_git_root(monkeypatch, tmp_path) -> None:
+    install_root = tmp_path / "pi-telemetry"
+    (install_root / ".git").mkdir(parents=True)
+    monkeypatch.setattr(updater, "latest_git_version", lambda repo_root, timeout=1.5: "1.1.0")
+    monkeypatch.setattr(updater, "latest_pypi_version", lambda timeout=1.5: "9.9.9")
+
+    notice = updater.build_update_notice("1.0.0", install_root=install_root)
+
+    assert notice["available"] is True
+    assert notice["channel"] == "git"
+    assert notice["latest_version"] == "1.1.0"
+    assert "git -C" in notice["update_command"]  # type: ignore[index]
+    assert notice["auto_update_ready"] is True
+
+
+def test_build_update_notice_falls_back_to_pypi(monkeypatch) -> None:
+    monkeypatch.setattr(updater, "latest_pypi_version", lambda timeout=1.5: "1.0.1")
+
+    notice = updater.build_update_notice("1.0.0")
+
+    assert notice["available"] is True
+    assert notice["channel"] == "pypi"
+    assert "pip install --upgrade" in notice["update_command"]  # type: ignore[index]
+    assert notice["auto_update_ready"] is True
+
+
+def test_build_update_notice_uses_release_feed(monkeypatch) -> None:
+    monkeypatch.setenv(
+        updater.RELEASE_FEED_URL_ENV,
+        "https://example.invalid/releases.json",
+    )
+    monkeypatch.setattr(
+        updater,
+        "latest_release_feed",
+        lambda feed_url=None, timeout=1.5: {
+            "version": "1.2.0",
+            "release_url": "https://example.invalid/releases/1.2.0",
+            "summary": "Beta release available.",
+            "channel": "beta",
+            "install_command": '"python" -m pip install --upgrade pi-telemetry==1.2.0',
+        },
+    )
+
+    notice = updater.build_update_notice("1.1.0")
+
+    assert notice["available"] is True
+    assert notice["channel"] == "beta"
+    assert notice["release_url"] == "https://example.invalid/releases/1.2.0"
+    assert notice["summary"] == "Beta release available."
+    assert notice["auto_update_ready"] is True
+    assert notice["install_command"] == '"python" -m pip install --upgrade pi-telemetry==1.2.0'
+
+
+def test_build_update_notice_uses_prompt_only_feed_when_no_install_command(monkeypatch) -> None:
+    monkeypatch.setenv(
+        updater.RELEASE_FEED_URL_ENV,
+        "https://example.invalid/releases.json",
+    )
+    monkeypatch.setattr(
+        updater,
+        "latest_release_feed",
+        lambda feed_url=None, timeout=1.5: {
+            "version": "1.2.0",
+            "release_url": "https://example.invalid/releases/1.2.0",
+            "summary": "Beta release available.",
+            "channel": "beta",
+        },
+    )
+
+    notice = updater.build_update_notice("1.1.0")
+
+    assert notice["available"] is True
+    assert notice["channel"] == "beta"
+    assert notice["auto_update_ready"] is False
+    assert notice["install_command"] is None
+
+
+def test_build_update_notice_prompts_for_working_tree(monkeypatch, tmp_path) -> None:
+    install_root = tmp_path / "pi-telemetry"
+    (install_root / ".git").mkdir(parents=True)
+    monkeypatch.setattr(updater, "latest_git_version", lambda repo_root, timeout=1.5: None)
+    monkeypatch.setattr(updater, "latest_pypi_version", lambda timeout=1.5: None)
+    monkeypatch.setattr(
+        updater,
+        "git_worktree_status",
+        lambda repo_root: {
+            "is_git": True,
+            "is_dirty": True,
+            "exact_tag": None,
+            "branch": "main",
+            "commit": "abc1234",
+        },
+    )
+
+    notice = updater.build_update_notice("1.1.0", install_root=install_root)
+
+    assert notice["available"] is True
+    assert notice["channel"] == "working-tree"
+    assert "Working tree build detected" in notice["summary"]  # type: ignore[index]
+    assert "git -C" in notice["update_command"]  # type: ignore[index]
+    assert notice["auto_update_ready"] is False
+
+
+def test_apply_update_rejects_working_tree_notices() -> None:
+    result = updater.apply_update(
+        {
+            "available": True,
+            "checked": True,
+            "channel": "working-tree",
+            "kind": "revision",
+            "current_version": "1.1.0",
+            "latest_version": "1.1.0",
+            "release_url": updater.GITHUB_RELEASE_URL,
+            "update_command": "git status",
+            "install_root": None,
+            "summary": "working tree",
+            "auto_update_ready": False,
+            "source": "working-tree",
+        },
+        install_root=None,
+    )
+
+    assert result["ok"] is False
+    assert result["step"] == "noop"
+
+
+def test_apply_update_uses_pip_for_pypi_mode(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(*args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(updater.subprocess, "run", fake_run)
+    result = updater.apply_update({"channel": "pypi"}, install_root=None)
+
+    assert result["ok"] is True
+    assert calls[0][0][0][0] == updater.sys.executable  # type: ignore[index]
+
+
+def test_apply_update_uses_feed_install_command_when_present(monkeypatch) -> None:
+    calls = []
+
+    def fake_run(*args, **kwargs):
+        calls.append((args, kwargs))
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(updater.subprocess, "run", fake_run)
+    result = updater.apply_update(
+        {
+            "available": True,
+            "checked": True,
+            "channel": "beta",
+            "kind": "package",
+            "current_version": "1.1.0",
+            "latest_version": "1.2.0",
+            "release_url": "https://example.invalid/releases/1.2.0",
+            "update_command": '"python" -m pip install --upgrade pi-telemetry==1.2.0',
+            "install_command": '"python" -m pip install --upgrade pi-telemetry==1.2.0',
+            "install_root": None,
+            "summary": "beta release",
+            "auto_update_ready": True,
+            "source": "release-feed",
+        },
+        install_root=None,
+    )
+
+    assert result["ok"] is True
+    assert calls[0][0][0][0] == "python"

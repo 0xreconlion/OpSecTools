@@ -26,6 +26,8 @@ from typing import cast
 
 import psutil
 
+from pi_telemetry.updater import UPDATE_NOTICE_ENV
+
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8788
@@ -38,6 +40,19 @@ DEFAULT_CODEX_PROCESS_MARKER = "codex"
 CODEX_THREAD_LIMIT = 8
 CODEX_MODEL_LIMIT = 6
 CODEX_PROCESS_LIMIT = 8
+
+
+def load_update_notice() -> dict[str, object]:
+    raw = os.environ.get(UPDATE_NOTICE_ENV)
+    if not raw:
+        return {"available": False}
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError:
+        return {"available": False, "warning": "invalid update notice"}
+    if not isinstance(payload, dict):
+        return {"available": False, "warning": "invalid update notice"}
+    return payload
 
 
 HTML = r"""<!doctype html>
@@ -113,6 +128,74 @@ HTML = r"""<!doctype html>
       gap: 8px;
       color: var(--muted);
       text-align: right;
+    }
+
+    .update-banner {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 0 0 16px;
+      padding: 12px 14px;
+      border: 1px solid #3f4e61;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #182432, #111820);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+    }
+
+    .update-banner[hidden] {
+      display: none;
+    }
+
+    .update-copy {
+      min-width: 0;
+    }
+
+    .update-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .update-summary {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .update-command {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0a0d12;
+      color: var(--text);
+      font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+
+    .update-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .update-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 11px;
+      background: #0a0d12;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+      text-decoration: none;
+    }
+
+    .update-button.primary {
+      border-color: #3f4e61;
+      background: #1a2634;
     }
 
     .header-actions {
@@ -382,6 +465,19 @@ HTML = r"""<!doctype html>
       </div>
     </header>
 
+    <section class="update-banner" id="update-banner" hidden>
+      <div class="update-copy">
+        <div class="update-title" id="update-title">Update available</div>
+        <div class="update-summary" id="update-summary"></div>
+        <div class="update-command" id="update-command"></div>
+      </div>
+      <div class="update-actions">
+        <button class="update-button primary" id="update-copy" type="button">Copy command</button>
+        <a class="update-button" id="update-release" href="#" target="_blank" rel="noreferrer">Release notes</a>
+        <button class="update-button" id="update-hide" type="button">Skip this version</button>
+      </div>
+    </section>
+
     <section class="grid view-panel" id="host-view" data-panel="host">
       <article class="card">
         <div class="label"><span>CPU Load</span><span id="cpu-state" class="ok">nominal</span></div>
@@ -527,6 +623,7 @@ HTML = r"""<!doctype html>
     const POLL_MS = 1000;
     const RESIZE_SETTLE_MS = 650;
     const MAX_DEVICE_PIXEL_RATIO = 2;
+    const UPDATE_STORAGE_KEY = 'piTelemetrySkippedUpdateVersion';
     let maxPoints = 80;
     let pollTimer = null;
     let resizeTimer = null;
@@ -674,6 +771,53 @@ HTML = r"""<!doctype html>
         state === 'live' ? 'var(--green)' :
         state === 'offline' ? 'var(--red)' :
         state === 'resizing' || state === 'paused' ? 'var(--amber)' : 'var(--blue)';
+    }
+
+    function renderUpdateNotice(update) {
+      const banner = $('update-banner');
+      if (!banner) return;
+
+      const notice = update && typeof update === 'object' ? update : {};
+      const available = Boolean(notice.available);
+      const latestVersion = String(notice.latest_version || '');
+      const skippedVersion = window.localStorage.getItem(UPDATE_STORAGE_KEY);
+      if (!available || (skippedVersion && skippedVersion === latestVersion)) {
+        banner.hidden = true;
+        return;
+      }
+
+      banner.hidden = false;
+      $('update-title').textContent = `Update available: ${latestVersion}`;
+      $('update-summary').textContent = String(
+        notice.summary || `You are running ${notice.current_version || '--'}.`
+      );
+      $('update-command').textContent = String(notice.update_command || '');
+
+      const releaseLink = $('update-release');
+      releaseLink.href = String(notice.release_url || '#');
+      releaseLink.textContent =
+        notice.channel === 'working-tree' ? 'Revision notes' :
+        notice.channel === 'git' ? 'GitHub releases' : 'PyPI release';
+      if (notice.channel !== 'working-tree' && notice.channel !== 'git' && notice.channel !== 'pypi') {
+        releaseLink.textContent = 'Release notes';
+      }
+
+      $('update-copy').onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(String(notice.update_command || ''));
+          $('update-copy').textContent = 'Copied';
+        } catch (error) {
+          $('update-copy').textContent = 'Copy failed';
+        }
+        window.setTimeout(() => {
+          $('update-copy').textContent = 'Copy command';
+        }, 1500);
+      };
+
+      $('update-hide').onclick = () => {
+        window.localStorage.setItem(UPDATE_STORAGE_KEY, latestVersion);
+        banner.hidden = true;
+      };
     }
 
     function prepareCanvas(canvas) {
@@ -865,6 +1009,7 @@ HTML = r"""<!doctype html>
     function render(data) {
       renderHost(data);
       renderLlm(data.llm, data);
+      renderUpdateNotice(data.update);
     }
 
     function abortActiveFetch() {
@@ -965,6 +1110,7 @@ HTML = r"""<!doctype html>
       activeView,
       maxPoints,
       profile: document.documentElement.dataset.dashboardProfile,
+      updateVisible: !$('update-banner').hidden,
       canvas: Array.from(document.querySelectorAll('canvas')).map(canvas => ({
         id: canvas.id,
         width: canvas.width,
@@ -1506,11 +1652,13 @@ class TelemetryState:
         self,
         throttle_cache: ThrottleCache,
         llm_state: CodexTelemetryState | None = None,
+        update_notice: dict[str, object] | None = None,
     ) -> None:
         self.previous_network: dict[str, object] | None = None
         self.lock = threading.Lock()
         self.throttle_cache = throttle_cache
         self.llm_state = llm_state or CodexTelemetryState()
+        self.update_notice = update_notice or load_update_notice()
         # Prime the CPU percent sampler
         for proc in psutil.process_iter():
             try:
@@ -1590,6 +1738,7 @@ class TelemetryState:
                 "status": self.throttle_cache.get_throttle_status(),
             },
             "llm": self.llm_state.snapshot(),
+            "update": self.update_notice,
             "glances": {
                 "server_running": any(
                     "glances" in " ".join(proc.info.get("cmdline") or []).lower()
@@ -1713,8 +1862,9 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
-    args = parse_args()
+def main(args: argparse.Namespace | None = None) -> None:
+    if args is None:
+        args = parse_args()
     throttle_cache = ThrottleCache()
     llm_state = CodexTelemetryState(
         Path(args.codex_state_path).expanduser(),

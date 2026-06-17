@@ -26,7 +26,7 @@ OpSecTools/
 - Put `dashboard.py` at `src/pi_telemetry/dashboard.py`.
 - Put `__init__.py` at `src/pi_telemetry/__init__.py`.
 - Keep pi-telemetry docs and packaging files in `tools/pi-telemetry/`.
-- Before tagging v1.0.0, verify the `LICENSE` copyright holder is real and
+- Before tagging v1.1.1, verify the `LICENSE` copyright holder is real and
   intentional.
 - If the generated `pyproject.toml` assumes a flat package layout, adjust it to
   discover packages under `src`.
@@ -42,5 +42,5 @@ and the console script should point at the package module:
 
 ```toml
 [project.scripts]
-pi-telemetry = "pi_telemetry.dashboard:main"
+pi-telemetry = "pi_telemetry.launcher:main"
 ```

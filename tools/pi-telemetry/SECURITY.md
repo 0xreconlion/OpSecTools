@@ -16,6 +16,7 @@ Pi Telemetry is designed for **local-only, trusted environments**. The default c
 - **Information disclosure** – Uses proper HTML escaping to prevent XSS when displaying system information.
 - **Request security** – Sends cache-control headers and enforces secure response headers (X-Frame-Options, X-Content-Type-Options).
 - **LLM privacy boundary** – The LLM view is metadata-only and does not read prompt/session transcript files.
+- **Update boundary** – Startup version checks are read-only. No update command runs unless the user enables automatic update mode or explicitly copies and executes the shown command.
 
 ## Reporting a vulnerability
 
@@ -98,12 +99,16 @@ Psutil is a well-maintained, widely-used library with a strong security track re
 
 Security patches will be released as soon as possible and announced in the CHANGELOG.
 
+## Update behavior
+
+The launcher may query PyPI, a configured release feed, or the configured git remote to detect a newer release. That check is read-only. If `PI_TELEMETRY_UPDATE_MODE=auto` is enabled, the launcher may run local package-management commands to update the same user-owned installation before the dashboard starts. Release-feed notices stay prompt-only unless they carry an explicit install command. The updater does not elevate privileges and does not reach out beyond the selected version source.
+
 ## Vulnerability history
 
 None reported yet. This is early software—use at your own risk and report issues responsibly.
 
 ---
 
-**Last updated:** 2026-06-13
+**Last updated:** 2026-06-16
 
 If you have questions about this policy, please open a discussion on GitHub.

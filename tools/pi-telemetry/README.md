@@ -12,6 +12,10 @@ A lightweight, self-contained browser dashboard for real-time Raspberry Pi hardw
 - **Dark mode dashboard** – Responsive design with live charts
 - **Desktop app** – Launchable from app menu or desktop shortcut on XFCE, GNOME, KDE
 
+Release note, AAR, and token-cost analysis source:
+
+- [docs/OBS_AAR_TOKEN_COST_ANALYSIS.md](docs/OBS_AAR_TOKEN_COST_ANALYSIS.md)
+
 ## Install
 
 ### From source
@@ -64,6 +68,26 @@ The dashboard has two live views:
 - **LLM** – Metadata-only local LLM telemetry focused on Codex CLI usage, token totals, token delta/rate, model mix, recent thread metadata, Codex process pressure, and host pressure while LLM work is active.
 
 The browser UI adapts to full-screen, snapped, and narrow windows. During manual resize or screen snapping, polling pauses briefly and resumes after the layout settles so the live feed does not fight the browser while frames are being adjusted.
+
+### Updates
+
+When a newer release is available, the launcher checks for it at startup and the dashboard shows a banner with the exact update command. The prompt is non-blocking by default: you can copy the command, open the release notes, or hide that version in the browser.
+
+Supported update paths:
+
+- `pip` installs: `python -m pip install --upgrade pi-telemetry`
+- source checkouts with a recorded repo root: `git pull --ff-only` followed by reinstall from that checkout
+- optional release feeds for beta/stable channels via JSON
+- working-tree prompts when the app is running from an unreleased git checkout
+
+The updater is source-driven: new update channels are added by registering another source, not by rewriting the launcher flow.
+Feed notices stay prompt-only unless the feed includes an explicit install command. That keeps staged releases safe while still allowing auto-update mode for trusted feeds.
+
+Automatic update before launch is opt-in:
+
+```bash
+PI_TELEMETRY_UPDATE_MODE=auto pi-telemetry
+```
 
 ### Custom port
 
@@ -126,6 +150,9 @@ Or close the Chromium window.
 | `PI_TELEMETRY_LLM` | `true` | Enable metadata-only local LLM telemetry (`0`, `false`, `no`, `off`, or `disabled` turn it off) |
 | `PI_TELEMETRY_CODEX_STATE` | `~/.codex/state_5.sqlite` | Override the Codex CLI state database path |
 | `PI_TELEMETRY_CODEX_PROCESS` | `codex` | Process name/cmdline marker used for local LLM process pressure |
+| `PI_TELEMETRY_UPDATE_MODE` | `prompt` | Update behavior at startup (`prompt`, `auto`, or `off`) |
+| `PI_TELEMETRY_INSTALL_ROOT` | unset | Source checkout root used for git-backed updates when available |
+| `PI_TELEMETRY_RELEASE_FEED_URL` | unset | Optional JSON feed for beta/stable release notices |
 
 The Python entrypoint also accepts matching command-line flags:
 

@@ -19,6 +19,7 @@ import socket
 import subprocess
 import threading
 import time
+from urllib.parse import parse_qs, urlsplit
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -328,6 +329,18 @@ HTML = r"""<!doctype html>
       font-size: 13px;
     }
 
+    .rca-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .rca-detail {
+      overflow-wrap: anywhere;
+    }
+
     .summary-row {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -541,6 +554,21 @@ HTML = r"""<!doctype html>
         </table>
       </article>
 
+      <article class="card full">
+        <div class="label"><span>RCA Snapshot</span><span id="rca-state" class="muted">boot</span></div>
+        <div class="summary-row">
+          <div class="summary-item"><span>Host</span><strong id="rca-host-state">--</strong></div>
+          <div class="summary-item"><span>LLM</span><strong id="rca-llm-state">--</strong></div>
+          <div class="summary-item"><span>Browser</span><strong id="rca-browser-state">--</strong></div>
+        </div>
+        <div class="details rca-detail" id="rca-detail">Waiting for the first telemetry sample.</div>
+        <div class="rca-actions">
+          <button class="update-button primary" id="rca-copy" type="button">Copy JSON</button>
+          <button class="update-button" id="rca-download" type="button">Download JSON</button>
+          <button class="update-button" id="rca-refresh" type="button">Refresh snapshot</button>
+        </div>
+      </article>
+
       <article class="card wide">
         <div class="label"><span>Top Processes</span><span class="muted">cpu sorted</span></div>
         <table>
@@ -703,6 +731,12 @@ HTML = r"""<!doctype html>
       return 'muted';
     }
 
+    function pressureStateLabel(value) {
+      if (value >= 85) return ['bad', 'hot'];
+      if (value >= 70) return ['warn', 'watch'];
+      return ['ok', 'nominal'];
+    }
+
     function setActiveView(view) {
       activeView = view === 'llm' ? 'llm' : 'host';
       document.querySelectorAll('[data-panel]').forEach(panel => {
@@ -715,6 +749,26 @@ HTML = r"""<!doctype html>
         button.tabIndex = selected ? 0 : -1;
       });
       window.requestAnimationFrame(redrawCharts);
+    }
+
+    const browserRca = {
+      longTaskCount: 0,
+      longTaskMs: 0,
+    };
+
+    if ('PerformanceObserver' in window) {
+      try {
+        const observer = new PerformanceObserver(list => {
+          for (const entry of list.getEntries()) {
+            browserRca.longTaskCount += 1;
+            browserRca.longTaskMs += Number(entry.duration) || 0;
+          }
+        });
+        observer.observe({ type: 'longtask', buffered: true });
+      } catch (error) {
+        browserRca.longTaskCount = 0;
+        browserRca.longTaskMs = 0;
+      }
     }
 
     function setMeter(prefix, percent, warn = 70, bad = 85) {
@@ -1009,7 +1063,124 @@ HTML = r"""<!doctype html>
     function render(data) {
       renderHost(data);
       renderLlm(data.llm, data);
+      renderRca(data);
       renderUpdateNotice(data.update);
+    }
+
+    function browserSnapshot() {
+      const navigation = performance.getEntriesByType('navigation')[0];
+      const resources = performance.getEntriesByType('resource');
+      return {
+        age_ms: Math.round(performance.now()),
+        dom_content_loaded_ms: navigation ? Math.round(navigation.domContentLoadedEventEnd) : null,
+        load_event_ms: navigation ? Math.round(navigation.loadEventEnd) : null,
+        resource_count: resources.length,
+        long_task_count: browserRca.longTaskCount,
+        long_task_ms: Math.round(browserRca.longTaskMs),
+      };
+    }
+
+    function buildRcaPayload(data) {
+      const llm = data.llm || {};
+      const summary = llm.summary || {};
+      const processes = llm.processes || {};
+      const hostPressure = Math.max(
+        Number(data.cpu.percent) || 0,
+        Number(data.memory.percent) || 0,
+        (Number(data.temperature.celsius) || 0) * 1.4,
+        (Number(data.load.normalized_1) || 0) * 100,
+      );
+      const [hostClass, hostLabel] = pressureStateLabel(hostPressure);
+      const client = typeof window.__piTelemetryStatus === 'function' ? window.__piTelemetryStatus() : {};
+      return {
+        captured_at: new Date().toISOString(),
+        host: {
+          hostname: data.host.hostname,
+          uptime: data.host.uptime,
+          cpu_percent: Number(data.cpu.percent) || 0,
+          memory_percent: Number(data.memory.percent) || 0,
+          swap_percent: Number(data.swap.percent) || 0,
+          temperature_celsius: Number(data.temperature.celsius) || 0,
+          load_1: Number(data.load.avg_1) || 0,
+          load_5: Number(data.load.avg_5) || 0,
+          load_15: Number(data.load.avg_15) || 0,
+          state: hostLabel,
+          state_class: hostClass,
+          throttle: data.throttle.status,
+        },
+        llm: {
+          available: Boolean(llm.available),
+          pressure: String(summary.pressure || (llm.available ? 'idle' : 'unavailable')),
+          thread_count: Number(summary.thread_count || 0),
+          total_tokens: Number(summary.total_tokens || 0),
+          token_delta: Number(summary.token_delta || 0),
+          tokens_per_minute: Number(summary.tokens_per_minute || 0),
+          dominant_model: String(summary.dominant_model || 'unknown'),
+          process_count: Number(processes.count || 0),
+          privacy: String(llm.privacy || 'metadata-only'),
+        },
+        browser: browserSnapshot(),
+        client: {
+          feedState: client.feedState || feedState,
+          polling: Boolean(client.polling),
+          resizing: Boolean(client.resizing),
+          inFlight: Boolean(client.inFlight),
+          activeView: client.activeView || activeView,
+          profile: client.profile || document.documentElement.dataset.dashboardProfile,
+          maxPoints: Number(client.maxPoints || maxPoints),
+        },
+      };
+    }
+
+    let lastRcaPayload = null;
+
+    function renderRca(data) {
+      const payload = buildRcaPayload(data);
+      lastRcaPayload = payload;
+
+      const host = payload.host;
+      const llm = payload.llm;
+      const browser = payload.browser;
+      const client = payload.client;
+
+      $('rca-state').textContent = `${host.state} / ${llm.pressure}`;
+      $('rca-state').className = host.state_class;
+      $('rca-host-state').textContent = `${host.state} (${host.cpu_percent.toFixed(1)}% cpu)`;
+      $('rca-llm-state').textContent = llm.available ? `${llm.pressure} · ${llm.thread_count} threads` : 'unavailable';
+      $('rca-browser-state').textContent = `${browser.long_task_count} long tasks · ${browser.resource_count} resources`;
+      $('rca-detail').textContent =
+        `uptime ${host.uptime}; temp ${host.temperature_celsius ? host.temperature_celsius.toFixed(1) + 'C' : '--'}; ` +
+        `swap ${host.swap_percent.toFixed(1)}%; load ${host.load_1.toFixed(2)}; ` +
+        `view ${client.activeView}; feed ${client.feedState}; polling ${client.polling ? 'on' : 'off'}; ` +
+        `browser ${browser.age_ms}ms since load`;
+
+      $('rca-copy').onclick = async () => {
+        const body = JSON.stringify(lastRcaPayload || payload, null, 2);
+        try {
+          await navigator.clipboard.writeText(body);
+          $('rca-copy').textContent = 'Copied';
+        } catch (error) {
+          $('rca-copy').textContent = 'Copy failed';
+        }
+        window.setTimeout(() => {
+          $('rca-copy').textContent = 'Copy JSON';
+        }, 1500);
+      };
+
+      $('rca-download').onclick = () => {
+        const body = JSON.stringify(lastRcaPayload || payload, null, 2);
+        const blob = new Blob([body], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `pi-telemetry-rca-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      };
+
+      $('rca-refresh').onclick = () => tick();
     }
 
     function abortActiveFetch() {
@@ -1118,6 +1289,7 @@ HTML = r"""<!doctype html>
         cssWidth: Math.round(canvas.getBoundingClientRect().width),
         cssHeight: Math.round(canvas.getBoundingClientRect().height),
       })),
+      browser: browserSnapshot(),
     });
 
     applyLayoutProfile();
@@ -1386,6 +1558,25 @@ def llm_pressure(processes: dict[str, object], tokens_per_minute: float) -> str:
     if process_count > 0 or tokens_per_minute > 0:
         return "active"
     return "idle"
+
+
+def pressure_state(value: float) -> tuple[str, str]:
+    if value >= 85.0:
+        return "bad", "hot"
+    if value >= 70.0:
+        return "warn", "watch"
+    return "ok", "nominal"
+
+
+def host_pressure_score(
+    cpu_percent: float,
+    memory_percent: float,
+    temperature_celsius: float | None,
+    normalized_load_1: float,
+) -> float:
+    temp_score = (temperature_celsius or 0.0) * 1.4
+    load_score = normalized_load_1 * 100.0
+    return round(max(cpu_percent, memory_percent, temp_score, load_score), 1)
 
 
 class CodexTelemetryState:
@@ -1679,6 +1870,18 @@ class TelemetryState:
         cpu_count = psutil.cpu_count() or 1
         cpu_freq = psutil.cpu_freq()
         boot_time = psutil.boot_time()
+        cpu_percent = round(psutil.cpu_percent(interval=None), 1)
+        per_core = [round(value, 1) for value in psutil.cpu_percent(interval=None, percpu=True)]
+        processes = process_snapshot()
+        llm = self.llm_state.snapshot()
+        llm_summary = cast(dict[str, object], llm.get("summary", {}))
+        rca_host_score = host_pressure_score(
+            cpu_percent,
+            round(vm.percent, 1),
+            temp,
+            load_1 / cpu_count,
+        )
+        host_class, host_label = pressure_state(rca_host_score)
 
         return {
             "refresh_seconds": 1.0,
@@ -1689,10 +1892,8 @@ class TelemetryState:
                 "uptime": format_duration(time.time() - boot_time),
             },
             "cpu": {
-                "percent": round(psutil.cpu_percent(interval=None), 1),
-                "per_core": [
-                    round(value, 1) for value in psutil.cpu_percent(interval=None, percpu=True)
-                ],
+                "percent": cpu_percent,
+                "per_core": per_core,
                 "count": cpu_count,
                 "frequency_mhz": round(cpu_freq.current) if cpu_freq else None,
             },
@@ -1733,11 +1934,11 @@ class TelemetryState:
                 "tx_total": net["tx_total"],
                 "interfaces": net["interfaces"],
             },
-            "processes": process_snapshot(),
+            "processes": processes,
             "throttle": {
                 "status": self.throttle_cache.get_throttle_status(),
             },
-            "llm": self.llm_state.snapshot(),
+            "llm": llm,
             "update": self.update_notice,
             "glances": {
                 "server_running": any(
@@ -1745,6 +1946,45 @@ class TelemetryState:
                     for proc in psutil.process_iter(["cmdline"])
                     if proc.info.get("cmdline")
                 )
+            },
+            "rca": {
+                "captured_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+                "host": {
+                    "score": rca_host_score,
+                    "state": host_label,
+                    "state_class": host_class,
+                    "cpu_percent": cpu_percent,
+                    "memory_percent": round(vm.percent, 1),
+                    "swap_percent": round(swap.percent, 1),
+                    "temperature_celsius": temp,
+                    "load_1": load_1,
+                    "load_5": load_5,
+                    "load_15": load_15,
+                    "throttle": self.throttle_cache.cached_status or "unavailable",
+                },
+                "llm": {
+                    "available": bool(llm.get("available")),
+                    "pressure": safe_label(
+                        llm_summary.get("pressure"), default="unavailable", limit=24
+                    ),
+                    "thread_count": safe_int(llm_summary.get("thread_count")),
+                    "total_tokens": safe_int(llm_summary.get("total_tokens")),
+                    "token_delta": safe_int(llm_summary.get("token_delta")),
+                    "tokens_per_minute": round(safe_float(llm_summary.get("tokens_per_minute")), 1),
+                    "dominant_model": safe_label(llm_summary.get("dominant_model"), limit=80),
+                    "process_count": safe_int(
+                        cast(dict[str, object], llm.get("processes", {})).get("count")
+                    ),
+                },
+                "browser": {
+                    "available": False,
+                    "note": "browser metrics are attached client-side",
+                },
+                "collectors": {
+                    "llm_enabled": bool(self.llm_state.enabled),
+                    "codex_process_marker": self.llm_state.process_marker,
+                    "state_path": self.llm_state.state_path.name,
+                },
             },
         }
 
@@ -1811,13 +2051,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self.write_response_body(body)
 
     def send_route(self, write_body: bool = True) -> None:
-        if self.path in {"/", "/index.html"}:
+        parsed = urlsplit(self.path)
+        route = parsed.path
+        query = parse_qs(parsed.query)
+
+        if route in {"/", "/index.html"}:
             self.send_html(write_body=write_body)
             return
-        if self.path == "/api/telemetry":
+        if route == "/api/telemetry":
             self.send_json(self.state.snapshot(), write_body=write_body)
             return
-        if self.path == "/health":
+        if route == "/api/rca":
+            rca = cast(dict[str, object], self.state.snapshot()["rca"])
+            if query.get("format", [""])[0] == "min":
+                rca = {
+                    "captured_at": rca["captured_at"],
+                    "host": rca["host"],
+                    "llm": rca["llm"],
+                    "collectors": rca["collectors"],
+                }
+            self.send_json(rca, write_body=write_body)
+            return
+        if route == "/health":
             self.send_json({"ok": True}, write_body=write_body)
             return
 

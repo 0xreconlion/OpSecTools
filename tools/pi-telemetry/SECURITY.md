@@ -16,7 +16,7 @@ Pi Telemetry is designed for **local-only, trusted environments**. The default c
 - **Information disclosure** – Uses proper HTML escaping to prevent XSS when displaying system information.
 - **Request security** – Sends cache-control headers and enforces secure response headers (X-Frame-Options, X-Content-Type-Options).
 - **LLM privacy boundary** – The LLM view is metadata-only and does not read prompt/session transcript files.
-- **Update boundary** – Startup version checks are read-only. No update command runs unless the user enables automatic update mode or explicitly copies and executes the shown command.
+- **Update boundary** – Startup version checks are read-only. The launcher never runs an update command itself; it only ever displays the command for the user to copy and run manually.
 
 ## Reporting a vulnerability
 
@@ -101,7 +101,7 @@ Security patches will be released as soon as possible and announced in the CHANG
 
 ## Update behavior
 
-The launcher may query PyPI, a configured release feed, or the configured git remote to detect a newer release. That check is read-only. If `PI_TELEMETRY_UPDATE_MODE=auto` is enabled, the launcher may run local package-management commands to update the same user-owned installation before the dashboard starts. Release-feed notices stay prompt-only unless they carry an explicit install command. The updater does not elevate privileges and does not reach out beyond the selected version source.
+The launcher may query PyPI, a configured release feed, or the configured git remote to detect a newer release. That check is read-only, and so is everything that follows it: the launcher only ever displays the relevant update command for the user to copy and run themselves. There is currently no automatic-update code path — `auto_update_ready` is always `false` — so no update or package-management command is ever executed by the launcher itself. The updater does not elevate privileges and does not reach out beyond the selected version source.
 
 ## Vulnerability history
 

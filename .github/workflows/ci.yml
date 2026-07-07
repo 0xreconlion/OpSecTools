@@ -8,6 +8,7 @@ on:
     paths:
       - ".github/workflows/ci.yml"
       - "tools/pi-telemetry/**"
+      - "tools/redline/**"
 
 jobs:
   test:
@@ -51,3 +52,24 @@ jobs:
       - name: Run tests
         working-directory: tools/pi-telemetry
         run: python -m pytest
+
+  redline:
+    name: Redline (Node)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: tools/redline
+        run: npm ci
+
+      - name: Run tests
+        working-directory: tools/redline
+        run: npm test

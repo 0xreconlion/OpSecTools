@@ -116,6 +116,17 @@ When enabled, the response also includes `llm` metadata from local Codex CLI sta
 
 Prompt text, session JSONL content, thread titles, previews, and full project paths are not read or exposed.
 
+### RCA export
+
+Use the RCA endpoint for a compact root-cause snapshot:
+
+```bash
+curl http://127.0.0.1:8788/api/rca | jq .
+curl http://127.0.0.1:8788/api/rca?format=min | jq .
+```
+
+`/api/rca` returns the same structured RCA block shown in the dashboard card. The `format=min` variant keeps only the core fields for lighter logging and quick copy/paste.
+
 ### Health check
 
 ```bash

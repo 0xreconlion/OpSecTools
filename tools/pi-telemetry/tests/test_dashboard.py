@@ -341,6 +341,87 @@ def test_codex_telemetry_reports_token_delta(tmp_path, monkeypatch) -> None:
     assert 490 <= snapshot["summary"]["tokens_per_minute"] <= 510  # type: ignore[index]
 
 
+def test_snapshot_includes_rca_summary(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dashboard,
+        "codex_process_snapshot",
+        lambda marker=dashboard.DEFAULT_CODEX_PROCESS_MARKER: {
+            "count": 0,
+            "cpu_percent": 0.0,
+            "memory_percent": 0.0,
+            "memory_bytes": 0,
+            "top": [],
+        },
+    )
+    state = dashboard.TelemetryState(
+        dashboard.ThrottleCache(),
+        llm_state=dashboard.CodexTelemetryState(tmp_path / "missing.sqlite", enabled=False),
+    )
+
+    snapshot = state.snapshot()
+
+    assert "rca" in snapshot
+    assert snapshot["rca"]["browser"]["available"] is False  # type: ignore[index]
+    assert snapshot["rca"]["collectors"]["llm_enabled"] is False  # type: ignore[index]
+    assert snapshot["rca"]["host"]["state"] in {"nominal", "watch", "hot"}  # type: ignore[index]
+
+
+def test_rca_endpoint_returns_snapshot(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dashboard,
+        "codex_process_snapshot",
+        lambda marker=dashboard.DEFAULT_CODEX_PROCESS_MARKER: {
+            "count": 0,
+            "cpu_percent": 0.0,
+            "memory_percent": 0.0,
+            "memory_bytes": 0,
+            "top": [],
+        },
+    )
+    handler = make_handler()
+    handler.state = dashboard.TelemetryState(
+        dashboard.ThrottleCache(),
+        llm_state=dashboard.CodexTelemetryState(tmp_path / "missing.sqlite", enabled=False),
+    )
+    handler.path = "/api/rca"
+
+    handler.do_GET()
+
+    payload = json.loads(handler.wfile.getvalue().decode("utf-8"))
+
+    assert handler.status == 200
+    assert payload["browser"]["available"] is False
+    assert payload["collectors"]["llm_enabled"] is False
+    assert "host" in payload
+
+
+def test_rca_endpoint_supports_min_format(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(
+        dashboard,
+        "codex_process_snapshot",
+        lambda marker=dashboard.DEFAULT_CODEX_PROCESS_MARKER: {
+            "count": 0,
+            "cpu_percent": 0.0,
+            "memory_percent": 0.0,
+            "memory_bytes": 0,
+            "top": [],
+        },
+    )
+    handler = make_handler()
+    handler.state = dashboard.TelemetryState(
+        dashboard.ThrottleCache(),
+        llm_state=dashboard.CodexTelemetryState(tmp_path / "missing.sqlite", enabled=False),
+    )
+    handler.path = "/api/rca?format=min"
+
+    handler.do_GET()
+
+    payload = json.loads(handler.wfile.getvalue().decode("utf-8"))
+
+    assert handler.status == 200
+    assert set(payload.keys()) == {"captured_at", "host", "llm", "collectors"}
+
+
 def test_process_marker_is_configurable() -> None:
     assert dashboard.matches_codex_process("python", ["ollama", "serve"], marker="ollama")
     assert not dashboard.matches_codex_process("python", ["ollama", "serve"], marker="codex")
@@ -397,6 +478,9 @@ def test_embedded_client_uses_resize_safe_polling() -> None:
     assert "activeView" in dashboard.HTML
     assert "update-banner" in dashboard.HTML
     assert "Copy command" in dashboard.HTML
+    assert "RCA Snapshot" in dashboard.HTML
+    assert "Copy JSON" in dashboard.HTML
+    assert "Download JSON" in dashboard.HTML
 
 
 def test_embedded_client_avoids_inline_style_attributes() -> None:

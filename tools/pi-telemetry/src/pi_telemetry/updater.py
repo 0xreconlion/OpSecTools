@@ -139,7 +139,9 @@ def _notice(
     ).as_dict()
 
 
-def build_update_notice(current_version: str, install_root: Path | None = None) -> dict[str, object]:
+def build_update_notice(
+    current_version: str, install_root: Path | None = None
+) -> dict[str, object]:
     install_root = install_root or detect_install_root()
     if install_root and (install_root / ".git").exists():
         latest_version = latest_git_version(install_root)
@@ -191,9 +193,7 @@ def build_update_notice(current_version: str, install_root: Path | None = None) 
             release_url=f"https://pypi.org/project/{PACKAGE_NAME}/{latest_version}/",
             update_command=f'"{sys.executable}" -m pip install --upgrade {PACKAGE_NAME}',
             install_root=install_root,
-            summary=(
-                f"Version {latest_version} is available. You are running {current_version}."
-            ),
+            summary=(f"Version {latest_version} is available. You are running {current_version}."),
             source="pypi",
         )
 

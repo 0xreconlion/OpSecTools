@@ -13,6 +13,7 @@ not reviewed.
 | Tool | Status | Description |
 | --- | --- | --- |
 | `tools/pi-telemetry` | Initial package | Lightweight Raspberry Pi telemetry dashboard package. |
+| `tools/redline` | Initial package | Visual QA: pin notes on screenshots, export as a Markdown checklist. Ships as a Claude Desktop Extension (`.mcpb`) so Claude can read/export findings directly. |
 
 ## License
 
